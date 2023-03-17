@@ -9,7 +9,7 @@ from .layers import AvgReadout, Discriminator, Clusterator, Discriminator_cluste
 
 
 class conST(nn.Module):
-    def __init__(self, input_dim, params, n_clusters, dim, use_img, img_dim=768):
+    def __init__(self, input_dim, img_dim, params, n_clusters, dim, use_img):
         super(conST, self).__init__()
         self.alpha = 1.0
         # self.latent_dim = params.gcn_hidden2 + params.feat_hidden2

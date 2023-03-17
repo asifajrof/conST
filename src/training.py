@@ -72,7 +72,7 @@ class conST_training:
         else:
             self.adj_mask = None
 
-        self.model = conST(self.params.cell_feat_dim, self.params, self.n_clusters, self.dim, self.use_img).to(self.device)
+        self.model = conST(self.params.cell_feat_dim, self.params.morph_feat_dim, self.params, self.n_clusters, self.dim, self.use_img).to(self.device)
         self.optimizer = torch.optim.Adam(params=list(self.model.parameters()),
                                           lr=self.params.gcn_lr, weight_decay=self.params.gcn_decay)
 
