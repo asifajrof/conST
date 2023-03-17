@@ -61,6 +61,10 @@ def load_ST_file(file_fold, count_file='filtered_feature_bc_matrix.h5', load_ima
     adata_h5 = sc.read_visium(file_fold, load_images=load_images, count_file=count_file)
     adata_h5.var_names_make_unique()
 
+    if count_file != 'filtered_feature_bc_matrix.h5':
+        adata_extra = sc.read(os.path.join(file_fold, f'filtered_feature_bc_matrix.h5'))
+        adata_h5.X = adata_extra.X
+
     if load_images is False:
         if file_Adj is None:
             file_Adj = os.path.join(file_fold, "spatial/tissue_positions_list.csv")
