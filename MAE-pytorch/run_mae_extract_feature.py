@@ -15,6 +15,7 @@ from timm.models import create_model
 from datasets import DataAugmentationForMAE
 import modeling_pretrain
 from modeling_pretrain import pretrain_mae_base_patch16_224
+from tqdm import tqdm
 
 
 def get_args():
@@ -70,8 +71,8 @@ def main(args):
 
     features_all = []
     imgs = np.load(args.img_path)
-    for i, img in enumerate(imgs):
-        print('extracting img ', i, end='\r')
+    print('extracting img')
+    for i, img in tqdm(enumerate(imgs)):
         if img.shape[0] != args.input_size:
             img = cv2.resize(img, (args.input_size, args.input_size))
         img = Image.fromarray(img.astype(np.uint8))
