@@ -131,7 +131,10 @@ class conST_training:
 
     def process(self):
         self.model.eval()
-        latent_z, _, _, _, q, feat_x, gnn_z = self.model(self.node_X, self.adj_norm)
+        if self.use_img is False:
+            latent_z, _, _, _, q, feat_x, gnn_z = self.model(self.node_X, self.adj_norm)
+        else:
+            latent_z, _, _, _, _, q, feat_x, gnn_z = self.model(self.node_X, self.adj_norm, self.img)
         latent_z = latent_z.data.cpu().numpy()
         q = q.data.cpu().numpy()
         feat_x = feat_x.data.cpu().numpy()
@@ -140,7 +143,10 @@ class conST_training:
 
     def get_embedding(self):
         self.model.eval()
-        embedding, _, _, _, q, feat_x, gnn_z = self.model(self.node_X, self.adj_norm)
+        if self.use_img is False:
+            embedding, _, _, _, q, feat_x, gnn_z = self.model(self.node_X, self.adj_norm)
+        else:
+            embedding, _, _, _, _, q, feat_x, gnn_z = self.model(self.node_X, self.adj_norm, self.img)
         embedding = embedding.data.cpu().numpy()
         return embedding
     

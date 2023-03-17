@@ -9,15 +9,19 @@ from .layers import AvgReadout, Discriminator, Clusterator, Discriminator_cluste
 
 
 class conST(nn.Module):
-    def __init__(self, input_dim, params, n_clusters, dim, use_img):
+    def __init__(self, input_dim, params, n_clusters, dim, use_img, img_dim=768):
         super(conST, self).__init__()
         self.alpha = 1.0
-        self.latent_dim = params.gcn_hidden2 + params.feat_hidden2
+        # self.latent_dim = params.gcn_hidden2 + params.feat_hidden2
         self.tau = 0.5
         self.n_clusters = n_clusters
         self.dim = dim
         self.params = params
         self.use_img = use_img
+        if self.use_img:
+            self.latent_dim = params.gcn_hidden2 + params.feat_hidden2 * 2  # (_,48) * (48,300)
+        else:
+            self.latent_dim = params.gcn_hidden2 + params.feat_hidden2
 
         # feature autoencoder
         self.encoder = nn.Sequential()
@@ -30,11 +34,11 @@ class conST(nn.Module):
         # img feature autoencoder
         if self.use_img:
             self.img_encoder = nn.Sequential()
-            self.img_encoder.add_module('img_encoder_L1', full_block(input_dim, params.feat_hidden1, params.p_drop))
+            self.img_encoder.add_module('img_encoder_L1', full_block(img_dim, params.feat_hidden1, params.p_drop))
             self.img_encoder.add_module('img_encoder_L2', full_block(params.feat_hidden1, params.feat_hidden2, params.p_drop))
 
             self.img_decoder = nn.Sequential()
-            self.img_decoder.add_module('img_decoder_L0', full_block(self.latent_dim, input_dim, params.p_drop))
+            self.img_decoder.add_module('img_decoder_L0', full_block(self.latent_dim, img_dim, params.p_drop))
 
         # GCN layers
         if self.use_img:
@@ -46,19 +50,43 @@ class conST(nn.Module):
         self.dc = InnerProductDecoder(params.p_drop, act=lambda x: x)
 
         # DEC cluster layer
-        self.cluster_layer = Parameter(torch.Tensor(params.dec_cluster_n, params.gcn_hidden2 + params.feat_hidden2))
+        # self.cluster_layer = Parameter(torch.Tensor(params.dec_cluster_n, params.gcn_hidden2 + params.feat_hidden2))
+        if use_img:
+            self.cluster_layer = Parameter(torch.Tensor(params.dec_cluster_n,
+                                                        params.gcn_hidden2 + params.feat_hidden2 * 2))
+        else:
+            self.cluster_layer = Parameter(torch.Tensor(params.dec_cluster_n, params.gcn_hidden2 + params.feat_hidden2))
         torch.nn.init.xavier_normal_(self.cluster_layer.data)
 
         # projection
-        self.fc1 = torch.nn.Linear(params.feat_hidden2, params.feat_hidden2 * 2)
-        self.fc2 = torch.nn.Linear(params.feat_hidden2 * 2, params.feat_hidden2)
+        # self.fc1 = torch.nn.Linear(params.feat_hidden2, params.feat_hidden2 * 2)
+        # self.fc2 = torch.nn.Linear(params.feat_hidden2 * 2, params.feat_hidden2)
+        if use_img:
+            self.fc1 = torch.nn.Linear(self.params.feat_hidden2 * 2 + self.params.gcn_hidden2, self.params.feat_hidden2 * 3)
+            self.fc2 = torch.nn.Linear(self.params.feat_hidden2 * 3, self.params.feat_hidden2 * 2 + self.params.gcn_hidden2)
+        else:
+            self.fc1 = torch.nn.Linear(params.feat_hidden2, params.feat_hidden2 * 2)
+            self.fc2 = torch.nn.Linear(params.feat_hidden2 * 2, params.feat_hidden2)
 
         self.read = AvgReadout()
         self.sigm = nn.Sigmoid()
-        self.cluster = Clusterator(params.feat_hidden2, K=self.n_clusters)
-        self.disc_c = Discriminator_cluster(params.feat_hidden2, params.feat_hidden2, n_nb=self.dim,
-                                            num_clusters=self.n_clusters)
-        self.disc = Discriminator(params.feat_hidden2)
+        # self.cluster = Clusterator(params.feat_hidden2, K=self.n_clusters)
+        if use_img:
+            self.cluster = Clusterator(params.gcn_hidden2 + params.feat_hidden2 * 2, K=self.n_clusters)
+        else:
+            self.cluster = Clusterator(params.feat_hidden2, K=self.n_clusters)
+        # self.disc_c = Discriminator_cluster(params.feat_hidden2, params.feat_hidden2, n_nb=self.dim,
+        #                                     num_clusters=self.n_clusters)
+        # self.disc = Discriminator(params.feat_hidden2)
+        if use_img:
+            self.disc_c = Discriminator_cluster(params.gcn_hidden2 + params.feat_hidden2 * 2,
+                                                params.gcn_hidden2 + params.feat_hidden2 * 2, n_nb=self.dim,
+                                                num_clusters=self.n_clusters)
+            self.disc = Discriminator(params.gcn_hidden2 + params.feat_hidden2 * 2)
+        else:
+            self.disc_c = Discriminator_cluster(params.feat_hidden2, params.feat_hidden2, n_nb=self.dim,
+                                                num_clusters=self.n_clusters)
+            self.disc = Discriminator(params.feat_hidden2)
 
     def encode(self, x, adj, img=None):
         feat_x = self.encoder(x)
